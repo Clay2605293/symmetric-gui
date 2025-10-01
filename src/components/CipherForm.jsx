@@ -30,21 +30,10 @@ export default function CipherForm({
 
   const strengthLabel = ['Muy débil', 'Débil', 'OK', 'Buena', 'Fuerte', 'Excelente'][keyStrength]
 
-  // FIX: rounds a número; demás campos como string
-  const handleChange = (field) => (e) => {
-    const v = e.target.value
-    if (field === 'rounds') {
-      const n = Math.max(4, Math.min(12, parseInt(v, 10) || 8))
-      onChange?.({ rounds: n })
-    } else {
-      onChange?.({ [field]: v })
-    }
-  }
+  const handleChange = (field) => (e) => onChange?.({ [field]: e.target.value })
+  const handleRoundsChange = (e) => onChange?.({ rounds: +e.target.value }) // importante: número
 
-  const toggleShowKey = () => {
-    setShowKey(v => !v)
-    setTimeout(() => keyInputRef.current?.focus(), 0)
-  }
+  const toggleShowKey = () => { setShowKey(v => !v); setTimeout(() => keyInputRef.current?.focus(), 0) }
 
   const mainLabel = direction === 'encrypt' ? 'Plaintext' : 'Ciphertext'
   const mainValue = direction === 'encrypt' ? value.plaintext : value.ciphertext
@@ -61,15 +50,24 @@ export default function CipherForm({
     <section className="cf-card">
       <header className="cf-header">
         <div className="cf-title">
-          <h2>Symmetric Cipher</h2>
+          <h2>Substitute • Offset • NibbleShuffle • AddRoundKey • Transpose • AddConst</h2>
           <p>CBC por defecto. El IV se genera automáticamente.</p>
         </div>
-        <div className="cf-actions">
-          {onSwap && (
-            <button type="button" className="cf-btn ghost" onClick={onSwap} disabled={busy} title="Swap">
-              Swap
-            </button>
-          )}
+
+        {/* Toggle Encrypt/Decrypt */}
+        <div className="cf-mode">
+          <button
+            type="button"
+            className={`cf-switch ${direction}`}
+            onClick={() => !busy && onSwap?.()}
+            disabled={busy}
+            aria-label="Switch Encrypt / Decrypt"
+          >
+            <span className="cf-switch-opt left">Encrypt</span>
+            <span className="cf-switch-opt right">Decrypt</span>
+            <span className="cf-switch-knob" />
+          </button>
+
           {onClear && (
             <button type="button" className="cf-btn ghost" onClick={onClear} disabled={busy} title="Clear">
               Clear
@@ -137,22 +135,38 @@ export default function CipherForm({
           </div>
         </div>
 
-        {/* Encoding (hex/base64) */}
+        {/* Encoding */}
         <div className="cf-field">
           <label className="cf-label" htmlFor="encoding">Encoding</label>
-          <select
-            id="encoding"
-            className="cf-select"
-            value={encoding}
-            onChange={(e) => onEncodingChange?.(e.target.value)}
-            disabled={busy}
-          >
-            <option value="hex">hex</option>
-            <option value="base64">base64</option>
-          </select>
-          <div className="cf-hint">
-            <span>Re-encodeamos el output automáticamente.</span>
-          </div>
+          {direction === 'decrypt' ? (
+            <>
+              {/* Igual que IV: input solo lectura */}
+              <input
+                id="encoding"
+                className="cf-input ro"
+                value={encoding}
+                readOnly
+                spellCheck={false}
+              />
+              <div className="cf-hint">
+                <span>Detectado automáticamente (link/entrada).</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <select
+                id="encoding"
+                className="cf-select"
+                value={encoding}
+                onChange={(e) => onEncodingChange?.(e.target.value)}
+                disabled={busy}
+              >
+                <option value="hex">hex</option>
+                <option value="base64">base64</option>
+              </select>
+              <div className="cf-hint"><span>Re-encodeamos el output automáticamente.</span></div>
+            </>
+          )}
         </div>
 
         {/* IV (solo lectura) */}
@@ -171,28 +185,29 @@ export default function CipherForm({
           </div>
         </div>
 
-        {/* Rounds */}
-        <div className="cf-field">
-          <label className="cf-label" htmlFor="rounds">Rounds</label>
-          <div className="cf-slider-row">
-            <input
-              id="rounds"
-              className="cf-slider"
-              type="range"
-              min={4}
-              max={12}
-              step={1}
-              value={Number(value.rounds) || 8} 
-              onChange={handleChange('rounds')}
-              disabled={busy}
-            />
-            <span className="cf-badge">{Number(value.rounds) || 8}</span>
+        {/* Rounds: sólo en ENCRYPT */}
+        {direction === 'encrypt' && (
+          <div className="cf-field">
+            <label className="cf-label" htmlFor="rounds">Rounds</label>
+            <div className="cf-slider-row">
+              <input
+                id="rounds"
+                className="cf-slider"
+                type="range"
+                min={4}
+                max={12}
+                step={1}
+                value={value.rounds}
+                onChange={handleRoundsChange}
+                disabled={busy}
+              />
+              <span className="cf-badge">{value.rounds}</span>
+            </div>
+            <div className="cf-hint"><span>Más rondas ⇒ más difusión.</span></div>
           </div>
-          <div className="cf-hint"><span>Más rondas ⇒ más difusión.</span></div>
-        </div>
+        )}
       </div>
 
-      {/* Botón único */}
       <footer className="cf-footer">
         <button
           type="button"

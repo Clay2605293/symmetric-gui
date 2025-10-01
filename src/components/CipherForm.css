@@ -175,3 +175,75 @@
   border-color: #ff6b6b;
   box-shadow: 0 0 0 3px rgba(255, 107, 107, .15);
 }
+
+
+/* ===== Toggle Encrypt/Decrypt ===== */
+.cf-mode {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cf-switch {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  width: 230px;
+  height: 42px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.cf-switch .cf-switch-opt {
+  text-align: center;
+  font-size: .9rem;
+  color: #cbd5e1;
+  z-index: 1;
+  user-select: none;
+}
+.cf-switch .left { grid-column: 1; }
+.cf-switch .right { grid-column: 2; }
+
+.cf-switch .cf-switch-knob {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #6aa9ff, #5883ff);
+  box-shadow: 0 4px 16px rgba(0,0,0,.35);
+  transition: transform .25s ease;
+}
+
+.cf-switch.decrypt .cf-switch-knob {
+  transform: translateX(100%);
+}
+
+/* ===== Pills (read-only chips) ===== */
+.cf-pill.ro {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.10);
+  color: #cbd5e1;
+  display: inline-block;
+  min-width: 80px;
+  text-align: center;
+}
+
+/* (el resto de tus estilos actuales se mantienen) */
+
+/* Read-only inputs (encoding en decrypt, IV) */
+.cf-input.ro {
+  cursor: default;
+}
+.cf-input.ro:focus {
+  border-color: rgba(255,255,255,.08);
+  box-shadow: none;
+}

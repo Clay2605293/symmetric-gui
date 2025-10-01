@@ -4,6 +4,7 @@ import OutputPanel from '../components/OutputPanel'
 import RoundsView from '../components/RoundsView'
 import AvalancheDemo from '../components/AvalancheDemo'
 import { encryptConfusionOnly, decryptConfusionOnly } from '../lib/cipher'
+import { parseSharedUrl } from '../utils/share'          // ← NUEVO
 import '../styles/app.css'
 
 export default function Home() {
@@ -27,17 +28,12 @@ export default function Home() {
     ciphertext: '',
     decrypted: '',
     encoding: 'hex',   // 'hex' | 'base64'
-    cipherBytes: null, // Uint8Array del último ciphertext (para re-encodear)
+    cipherBytes: null, // Uint8Array del último ciphertext (para re-encodear y compartir)
   })
 
-  // Viewer (rondas/sbox del bloque activo)
+  // Viewer (rondas/sbox del mensaje completo)
   const [rounds, setRounds] = useState([])
   const [activeSBox, setActiveSBox] = useState(null)
-
-  // NUEVO: trazas por bloque + selección
-  const [roundsByBlock, setRoundsByBlock] = useState([]) // Array<Array<Round>>
-  const [sboxesByBlock, setSboxesByBlock] = useState([]) // Array<number[]>
-  const [activeBlock, setActiveBlock] = useState(0)
 
   // P-Box demo (solo visual)
   const demoPbox = useMemo(
@@ -132,6 +128,25 @@ export default function Home() {
 
   // ====== Handlers ======
   const onFormChange = (patch) => {
+    // Auto-parsear si pegan un URL en modo Decrypt (music/maps)
+    if ('ciphertext' in patch && direction === 'decrypt') {
+      const parsed = parseSharedUrl(patch.ciphertext || '')
+      if (parsed) {
+        const nextForm = {
+          ...form,
+          ciphertext: parsed.ciphertext,
+          iv: parsed.ivHex || form.iv,
+          rounds: parsed.rounds || form.rounds,
+        }
+        setForm(nextForm)
+        if (parsed.encoding && parsed.encoding !== out.encoding) {
+          setOut(prev => ({ ...prev, encoding: parsed.encoding }))
+        }
+        validateAll(nextForm, { ...out, encoding: parsed.encoding || out.encoding }, 'decrypt')
+        return
+      }
+    }
+
     const next = { ...form, ...patch }
     setForm(next)
     validateAll(next, out, direction)
@@ -143,10 +158,6 @@ export default function Home() {
     setOut(o => ({ ...o, ciphertext: '', decrypted: '', cipherBytes: null }))
     setRounds([])
     setActiveSBox(null)
-    // limpiar navegación por bloques
-    setRoundsByBlock([])
-    setSboxesByBlock([])
-    setActiveBlock(0)
     setErrors({})
   }
 
@@ -155,9 +166,6 @@ export default function Home() {
     setOut(o => ({ ...o, ciphertext: '', decrypted: '', cipherBytes: null }))
     setRounds([])
     setActiveSBox(null)
-    setRoundsByBlock([])
-    setSboxesByBlock([])
-    setActiveBlock(0)
     setErrors({})
   }
 
@@ -170,14 +178,6 @@ export default function Home() {
       }
       return { ...prev, encoding: enc }
     })
-  }
-
-  // ====== Selector de bloque (viewer) ======
-  const onBlockChange = (idx) => {
-    const i = Math.max(0, Math.min(idx, roundsByBlock.length - 1))
-    setActiveBlock(i)
-    setRounds(roundsByBlock[i] || [])
-    setActiveSBox(sboxesByBlock[i] || null)
   }
 
   // ====== Cifrar (CBC-only) ======
@@ -228,9 +228,7 @@ export default function Home() {
         afterPermute: '',
         subkeyHex: '',
         stateOut: '',
-        // afterShift es opcional
       }
-
       for (let b = 0; b < tracesPerBlock.length; b++) {
         const t = tracesPerBlock[b][r]
         if (!t) continue
@@ -240,7 +238,6 @@ export default function Home() {
           m.afterShift = (m.afterShift || '') + t.afterShift
         }
         m.afterPermute  += (t.afterPermute || '')
-        // La subkey es la misma por ronda; nos quedamos con la del primer bloque
         if (!m.subkeyHex && t.subkeyHex) m.subkeyHex = t.subkeyHex
         m.stateOut      += (t.stateOut || '')
       }
@@ -248,18 +245,17 @@ export default function Home() {
       mergedTraces.push(m)
     }
 
-    // 5) Enviar al viewer: ahora ve TODO el mensaje por ronda
+    // 5) Enviar al viewer (mensaje completo por ronda)
     setRounds(mergedTraces)
     setActiveSBox(sboxFirst)
 
-    // 6) Output final (y guardamos bytes crudos para re-encodear)
+    // 6) Output final (y guardamos bytes crudos para re-encodear/compartir)
     setOut(o => ({
       ...o,
       cipherBytes: outBuf,
       ciphertext: o.encoding === 'hex' ? bytesToHex(outBuf) : toBase64(outBuf),
     }))
   }
-
 
   // ====== Descifrar (CBC-only) ======
   const doDecrypt = () => {
@@ -322,7 +318,7 @@ export default function Home() {
 
   return (
     <div className="app">
-      <h1>Symmetric Cipher</h1>
+      <h1>Sonata</h1>
 
       <CipherForm
         direction={direction}
@@ -343,6 +339,9 @@ export default function Home() {
         value={activeOutput}
         label={activeLabel}
         busy={false}
+        cipherBytes={out.cipherBytes}
+        ivHex={form.iv}               // ← pasa IV a los builders de share
+        rounds={form.rounds}          // ← pasa rondas también
         onChange={onOutputChange}
       />
 
@@ -353,10 +352,6 @@ export default function Home() {
         blockBits={BLOCK_BITS}
         active={0}
         collapsed={false}
-        /* NUEVO: navegación por bloques */
-        blockCount={roundsByBlock.length}
-        activeBlock={activeBlock}
-        onBlockChange={onBlockChange}
       />
 
       <AvalancheDemo
