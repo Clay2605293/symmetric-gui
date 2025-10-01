@@ -6,7 +6,7 @@ import './AvalancheDemo.css'
  * - blockBits: number             // p.ej., 64
  * - keyBits: number               // p.ej., 128
  * - defaultKeyHex: string         // key en hex para demo
- * - encryptFn: (opts) => {        // función de cifrado a inyectar
+ * - encryptFn: (opts) => {
  *     // Debe aceptar:
  *     // plaintextHex: string (tamaño bloque en hex)
  *     // keyHex: string
@@ -15,12 +15,7 @@ import './AvalancheDemo.css'
  *     // rounds: number
  *     // y devolver { ciphertextHex: string }
  *   }
- *
- * - cipherOptions: {
- *     mode: 'ECB'|'CBC',
- *     ivHex?: string,
- *     rounds: number
- *   }
+ * - cipherOptions: { mode: 'ECB'|'CBC', ivHex?: string, rounds: number }
  */
 export default function AvalancheDemo({
   blockBits = 64,
@@ -39,12 +34,12 @@ export default function AvalancheDemo({
       ? defaultKeyHex.slice(0, keyBytes * 2)
       : '00000000000000000000000000000000'.slice(0, keyBytes * 2)
   )
-  const [flipTarget, setFlipTarget] = useState('plaintext') // 'plaintext' | 'key'
+  const [flipTarget, setFlipTarget] = useState('plaintext') // 'plaintext' | 'key' | 'iv'
   const [bitIndex, setBitIndex] = useState(0)               // 0..blockBits-1 o 0..keyBits-1
   const [busy, setBusy] = useState(false)
 
   const clampBitIndex = (idx) => {
-    const max = flipTarget === 'plaintext' ? blockBits - 1 : keyBits - 1
+    const max = flipTarget === 'key' ? keyBits - 1 : blockBits - 1 // plaintext/iv usan blockBits
     return Math.max(0, Math.min(idx, max))
   }
 
@@ -52,7 +47,7 @@ export default function AvalancheDemo({
     setBitIndex((i) => clampBitIndex(i))
   }, [flipTarget, blockBits, keyBits])
 
-  // Helpers
+  // ===== Helpers =====
   const hexToBytes = (hex) => {
     const s = (hex || '').replace(/\s+/g, '')
     const out = []
@@ -63,9 +58,11 @@ export default function AvalancheDemo({
     return new Uint8Array(out)
   }
 
-  const bytesToHex = (bytes) => {
-    return Array.from(bytes || []).map(b => b.toString(16).padStart(2, '0')).join('')
-  }
+  const bytesToHex = (bytes) =>
+    Array.from(bytes || []).map(b => b.toString(16).padStart(2, '0')).join('')
+
+  const normalizeHex = (hex, nBytes) =>
+    (hex || '').replace(/\s+/g, '').toLowerCase().padEnd(nBytes * 2, '0').slice(0, nBytes * 2)
 
   const flipOneBit = (hex, totalBits, idx) => {
     const bytes = hexToBytes(hex)
@@ -74,10 +71,14 @@ export default function AvalancheDemo({
     const bytePos = Math.floor(i / 8)
     const bitPos = 7 - (i % 8) // MSB primero
     const mask = 1 << bitPos
-    if (bytePos < bytes.length) {
-      bytes[bytePos] = bytes[bytePos] ^ mask
-    }
+    if (bytePos < bytes.length) bytes[bytePos] ^= mask
     return bytesToHex(bytes)
+  }
+
+  const popcnt8 = (x) => {
+    let c = 0, v = x & 0xff
+    while (v) { v &= v - 1; c++ }
+    return c
   }
 
   const diffBits = (aHex, bHex) => {
@@ -85,73 +86,66 @@ export default function AvalancheDemo({
     const b = hexToBytes(bHex)
     const len = Math.min(a.length, b.length)
     let diff = 0
-    for (let i = 0; i < len; i++) {
-      const x = a[i] ^ b[i]
-      diff += popcnt8(x)
-    }
+    for (let i = 0; i < len; i++) diff += popcnt8(a[i] ^ b[i])
     const total = len * 8
     const pct = total ? (diff / total) * 100 : 0
     return { diffBits: diff, totalBits: total, pct }
   }
 
-  const popcnt8 = (x) => {
-    // Brian Kernighan
-    let c = 0
-    let v = x & 0xff
-    while (v) {
-      v &= v - 1
-      c++
-    }
-    return c
-  }
-
-  // Cálculo principal
+  // ===== Cálculo principal (compara C0) =====
   const result = useMemo(() => {
     if (!encryptFn) return null
     try {
       const { mode, ivHex, rounds } = cipherOptions || {}
+
+      // Normalizamos tamaños exactos
+      const ptNorm = normalizeHex(plaintextHex, blockBytes)
+      const keyNorm = normalizeHex(keyHex,     keyBytes)
+      const ivNorm  = normalizeHex(ivHex || '', blockBytes)
+
       const base = encryptFn({
-        plaintextHex,
-        keyHex,
+        plaintextHex: ptNorm,
+        keyHex: keyNorm,
         mode: mode || 'ECB',
-        ivHex,
+        ivHex: ivNorm,
         rounds: rounds || 8,
       })
-      const flipHex = flipTarget === 'plaintext'
-        ? flipOneBit(plaintextHex, blockBits, bitIndex)
-        : flipOneBit(keyHex, keyBits, bitIndex)
+
+      const flipHex =
+        flipTarget === 'plaintext' ? flipOneBit(ptNorm, blockBits, bitIndex) :
+        flipTarget === 'key'       ? flipOneBit(keyNorm, keyBits,  bitIndex) :
+                                     flipOneBit(ivNorm,  blockBits, bitIndex) // 'iv'
+
       const alt = encryptFn({
-        plaintextHex: flipTarget === 'plaintext' ? flipHex : plaintextHex,
-        keyHex: flipTarget === 'key' ? flipHex : keyHex,
+        plaintextHex: flipTarget === 'plaintext' ? flipHex : ptNorm,
+        keyHex:       flipTarget === 'key'       ? flipHex : keyNorm,
         mode: mode || 'ECB',
-        ivHex,
+        ivHex:        flipTarget === 'iv'        ? flipHex : ivNorm,
         rounds: rounds || 8,
       })
-      const baseC = (base?.ciphertextHex || '').slice(0, blockBytes * 2)
-      const altC  = (alt?.ciphertextHex  || '').slice(0, blockBytes * 2)
+
+      const baseC = (base?.ciphertextHex || '').slice(0, blockBytes * 2) // C0
+      const altC  = (alt?.ciphertextHex  || '').slice(0, blockBytes * 2) // C0'
       const stats = diffBits(baseC, altC)
-      return { baseC, altC, stats }
+      return { baseC, altC, stats, ivNorm }
     } catch {
       return null
     }
-  }, [encryptFn, plaintextHex, keyHex, flipTarget, bitIndex, cipherOptions, blockBits, keyBits, blockBytes])
+  }, [encryptFn, plaintextHex, keyHex, flipTarget, bitIndex, cipherOptions, blockBits, keyBits, blockBytes, keyBytes])
 
-  // Gráfico por byte: pinta intensidad según bits distintos por byte
+  // Por-byte: 0..8 bits distintos
   const byteDiffs = useMemo(() => {
     if (!result) return []
     const a = hexToBytes(result.baseC)
     const b = hexToBytes(result.altC)
     const len = Math.min(a.length, b.length)
     const arr = []
-    for (let i = 0; i < len; i++) {
-      const d = popcnt8(a[i] ^ b[i])
-      arr.push(d) // 0..8
-    }
+    for (let i = 0; i < len; i++) arr.push(popcnt8(a[i] ^ b[i]))
     return arr
   }, [result])
 
+  // UI handlers
   const handleRandomize = () => {
-    // Datos aleatorios válidos para el tamaño
     const randHex = (nBytes) =>
       Array.from(crypto.getRandomValues(new Uint8Array(nBytes)))
         .map(b => b.toString(16).padStart(2, '0')).join('')
@@ -162,7 +156,7 @@ export default function AvalancheDemo({
   const handleFlipChange = (e) => setFlipTarget(e.target.value)
   const handleBitIndex = (e) => setBitIndex(clampBitIndex(Number(e.target.value)))
 
-  const activeBits = flipTarget === 'plaintext' ? blockBits : keyBits
+  const activeBits = flipTarget === 'key' ? keyBits : blockBits
 
   return (
     <section className="av-card">
@@ -171,10 +165,15 @@ export default function AvalancheDemo({
         <div className="av-sub">
           <span>Block: {blockBits} bits</span>
           <span>Key: {keyBits} bits</span>
+          <span>Comparando <b>C₀</b> (primer bloque)</span>
+          {cipherOptions?.ivHex && (
+            <span>IV (app): <code className="mono">{normalizeHex(cipherOptions.ivHex, blockBytes)}</code></span>
+          )}
         </div>
       </header>
 
       <div className="av-grid">
+        {/* Panel izquierdo: inputs */}
         <div className="av-box">
           <div className="av-row">
             <label className="av-label">Plaintext (hex)</label>
@@ -203,6 +202,7 @@ export default function AvalancheDemo({
               <select value={flipTarget} onChange={handleFlipChange}>
                 <option value="plaintext">Plaintext</option>
                 <option value="key">Key</option>
+                <option value="iv">IV</option>
               </select>
             </div>
 
@@ -229,6 +229,7 @@ export default function AvalancheDemo({
           </div>
         </div>
 
+        {/* Panel derecho: resultados */}
         <div className="av-box">
           <div className="av-row">
             <label className="av-label">Ciphertext (base)</label>
