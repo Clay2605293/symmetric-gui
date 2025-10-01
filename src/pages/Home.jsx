@@ -1,10 +1,11 @@
+// src/pages/Home.jsx
 import { useEffect, useMemo, useState } from 'react'
 import CipherForm from '../components/CipherForm'
 import OutputPanel from '../components/OutputPanel'
 import RoundsView from '../components/RoundsView'
 import AvalancheDemo from '../components/AvalancheDemo'
 import { encryptConfusionOnly, decryptConfusionOnly } from '../lib/cipher'
-import { parseSharedUrl } from '../utils/share'          // ← NUEVO
+import { parseSharedUrl } from '../utils/share'
 import '../styles/app.css'
 
 export default function Home() {
@@ -28,7 +29,7 @@ export default function Home() {
     ciphertext: '',
     decrypted: '',
     encoding: 'hex',   // 'hex' | 'base64'
-    cipherBytes: null, // Uint8Array del último ciphertext (para re-encodear y compartir)
+    cipherBytes: null, // Uint8Array del último ciphertext (para re-encode/compartir)
   })
 
   // Viewer (rondas/sbox del mensaje completo)
@@ -216,32 +217,39 @@ export default function Home() {
       if (!sboxFirst) sboxFirst = sbox
     }
 
-    // === FUSIÓN: construimos una traza por RONDA concatenando todos los bloques ===
+    // === FUSIÓN: traza por RONDA concatenando todos los bloques ===
     const mergedTraces = []
     const R = form.rounds
 
     for (let r = 0; r < R; r++) {
       const m = {
         idx: r,
-        stateIn: '',
-        afterSubBytes: '',
-        afterPermute: '',
-        subkeyHex: '',
-        stateOut: '',
+        stateIn:        '',
+        afterSubBytes:  '', // S
+        afterShift:     '', // O
+        afterNibble:    '', // N
+        subkeyHex:      '', // A (subkey)
+        afterPermute:   '', // T
+        constHex:       '', // A (const)
+        afterConst:     '', // alias para el viewer si lo necesita
+        stateOut:       '',
       }
       for (let b = 0; b < tracesPerBlock.length; b++) {
         const t = tracesPerBlock[b][r]
         if (!t) continue
-        m.stateIn       += (t.stateIn || '')
-        m.afterSubBytes += (t.afterSubBytes || '')
-        if (typeof t.afterShift === 'string') {
-          m.afterShift = (m.afterShift || '') + t.afterShift
-        }
-        m.afterPermute  += (t.afterPermute || '')
+        m.stateIn        += (t.stateIn || '')
+        m.afterSubBytes  += (t.afterSubBytes || '')
+        if (typeof t.afterShift  === 'string') m.afterShift  += t.afterShift
+        if (typeof t.afterNibble === 'string') m.afterNibble += t.afterNibble
+        m.afterPermute   += (t.afterPermute || '')
         if (!m.subkeyHex && t.subkeyHex) m.subkeyHex = t.subkeyHex
-        m.stateOut      += (t.stateOut || '')
+        if (t.constHex) { m.constHex += t.constHex; m.afterConst += t.constHex }
+        m.stateOut       += (t.stateOut || '')
       }
-      if (m.afterShift === undefined) delete m.afterShift
+      // Limpieza: si alguna no apareció en la ronda, la removemos
+      if (!m.afterShift)  delete m.afterShift
+      if (!m.afterNibble) delete m.afterNibble
+      if (!m.constHex)    delete m.constHex, delete m.afterConst
       mergedTraces.push(m)
     }
 
@@ -340,19 +348,22 @@ export default function Home() {
         label={activeLabel}
         busy={false}
         cipherBytes={out.cipherBytes}
-        ivHex={form.iv}               // ← pasa IV a los builders de share
-        rounds={form.rounds}          // ← pasa rondas también
+        ivHex={form.iv}
+        rounds={form.rounds}
         onChange={onOutputChange}
       />
 
-      <RoundsView
-        rounds={rounds}
-        sbox={activeSBox || Array.from({ length: 16 }, (_, i) => i)}
-        pbox={demoPbox}
-        blockBits={BLOCK_BITS}
-        active={0}
-        collapsed={false}
-      />
+      {/* Ocultamos el viewer en Decrypt para no confundir */}
+      {direction === 'encrypt' && rounds.length > 0 && (
+        <RoundsView
+          rounds={rounds}
+          sbox={activeSBox || Array.from({ length: 16 }, (_, i) => i)}
+          pbox={demoPbox}
+          blockBits={BLOCK_BITS}
+          active={0}
+          collapsed={false}
+        />
+      )}
 
       <AvalancheDemo
         blockBits={BLOCK_BITS}

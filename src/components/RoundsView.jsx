@@ -1,3 +1,4 @@
+// src/components/RoundsView.jsx
 import { useEffect, useMemo, useState } from 'react'
 import './RoundsView.css'
 
@@ -52,12 +53,15 @@ export default function RoundsView({
     return rows
   }, [pbox])
 
-  // === NUEVO: una sola línea (bytes separados por espacio, sin saltos)
+  // Bytes a "xx xx xx ..." (una sola línea; el wrapper hará el salto visual)
   function oneLineHex(hex) {
     const s = (hex || '').replace(/\s+/g, '').toLowerCase()
     const bytes = s.match(/.{1,2}/g) || []
     return bytes.join(' ')
   }
+
+  // Compatibilidad: la constante puede venir como constHex o afterConst
+  const getConstHex = (r) => (r?.constHex ?? r?.afterConst ?? '')
 
   if (!rounds.length) return null
 
@@ -99,38 +103,57 @@ export default function RoundsView({
           </div>
         </aside>
 
-        {/* Panel central simple */}
+        {/* Panel central SONATA */}
         <div className="rv-main">
           <div className="rv-badge">Round #{(onSelect ? active : localActive) + 1}</div>
 
           {current ? (
             <div className="rv-lines">
+              {/* S — Substitute */}
               <div className="rv-line">
                 <div className="rv-tag">State In</div>
                 <pre className="rv-block">{oneLineHex(current.stateIn)}</pre>
               </div>
-
               <div className="rv-line">
-                <div className="rv-tag">S-Box → After SubBytes</div>
+                <div className="rv-tag">Substitute (S)</div>
                 <pre className="rv-block">{oneLineHex(current.afterSubBytes)}</pre>
               </div>
 
+              {/* O — Offset (ShiftNibbles) */}
               {'afterShift' in current && (
                 <div className="rv-line">
-                  <div className="rv-tag">ShiftNibbles → After Shift</div>
+                  <div className="rv-tag">Offset (ShiftNibbles) (O)</div>
                   <pre className="rv-block">{oneLineHex(current.afterShift)}</pre>
                 </div>
               )}
 
+              {/* N — NibbleShuffle */}
+              {'afterNibble' in current && (
+                <div className="rv-line">
+                  <div className="rv-tag">NibbleShuffle (N)</div>
+                  <pre className="rv-block">{oneLineHex(current.afterNibble)}</pre>
+                </div>
+              )}
+
+              {/* A — AddRoundKey (subkey usada para XOR) */}
               <div className="rv-line">
-                <div className="rv-tag">P-Box → After PermuteBits</div>
+                <div className="rv-tag">AddRoundKey (A)</div>
+                <pre className="rv-block">{oneLineHex(current.subkeyHex)}</pre>
+              </div>
+
+              {/* T — Transpose (P-Box) */}
+              <div className="rv-line">
+                <div className="rv-tag">Transpose (P-Box) (T)</div>
                 <pre className="rv-block">{oneLineHex(current.afterPermute)}</pre>
               </div>
 
-              <div className="rv-line">
-                <div className="rv-tag">XOR Subkey → Subkey</div>
-                <pre className="rv-block">{oneLineHex(current.subkeyHex)}</pre>
-              </div>
+              {/* A — AddConst (constante de ronda) */}
+              {getConstHex(current) && (
+                <div className="rv-line">
+                  <div className="rv-tag">AddConst (Rc) (A)</div>
+                  <pre className="rv-block">{oneLineHex(getConstHex(current))}</pre>
+                </div>
+              )}
 
               <div className="rv-line">
                 <div className="rv-tag">State Out</div>

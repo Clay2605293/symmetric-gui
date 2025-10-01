@@ -50,8 +50,8 @@ export default function CipherForm({
     <section className="cf-card">
       <header className="cf-header">
         <div className="cf-title">
-          <h2>Substitute • Offset • NibbleShuffle • AddRoundKey • Transpose • AddConst</h2>
-          <p>CBC por defecto. El IV se genera automáticamente.</p>
+          <h2>Texto falta</h2>
+          <p>Substitute • Offset • NibbleShuffle • AddRoundKey • Transpose • AddConst</p>
         </div>
 
         {/* Toggle Encrypt/Decrypt */}

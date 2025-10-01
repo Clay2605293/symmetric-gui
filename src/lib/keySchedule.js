@@ -1,17 +1,11 @@
 // src/lib/keySchedule.js
 // Genera subllaves de 64 bits (8 bytes) por ronda a partir de la key del usuario.
-// Idea (simple y didáctica):
-//   1) Normalizar key a 16 bytes (128 bits)
-//   2) Para cada ronda r:
-//      - Rotar 128 bits a la izquierda (rot = 7*r + 3)
-//      - Pasar cada nibble por la S-Box (confusión en la key)
-//      - XOR con una constante de ronda RC_r (diferencia rondas)
-//      - Extraer 8 bytes (pares) => K_r (64 bits)
-//      - El resultado de la mezcla queda como estado para la siguiente ronda
+// Además provee constantes de ronda (8 bytes) y máscaras de NibbleShuffle (1 byte) por ronda,
+// todo determinístico a partir de la misma key (útil para mantener SONATA coherente en encrypt/decrypt).
 
 import { generateSBoxFromKey_simple, subBytesByte } from './sbox.js'
 
-// -------- Utilidades básicas --------
+/* ===================== Utilidades básicas ===================== */
 
 // Convierte string a UTF-8 bytes
 function strToBytes(str = '') {
@@ -98,7 +92,7 @@ export function extract64_evenBytes(bytes16) {
   return out
 }
 
-// -------- API principal: deriveSubkeys --------
+/* ===================== Key schedule principal ===================== */
 
 /**
  * Genera subllaves de 64 bits por ronda.
@@ -138,7 +132,57 @@ export function deriveSubkeys(keyStr, rounds, sbox) {
   return out
 }
 
-// -------- (Opcional) helpers de depuración --------
+/* ===================== Constantes/máscaras por ronda (SONATA) ===================== */
+
+// Hash FNV-1a sobre la key (32 bits) —determinista, simple.
+function seedFromKey(keyStr) {
+  let s = 2166136261 >>> 0
+  for (let i = 0; i < keyStr.length; i++) {
+    s ^= keyStr.charCodeAt(i) & 0xff
+    s = (Math.imul(s, 16777619)) >>> 0
+  }
+  return s >>> 0
+}
+// xorshift32 simple
+function nextRand32(x) {
+  x ^= (x << 13); x >>>= 0
+  x ^= (x << 17); x >>>= 0
+  x ^= (x << 5);  x >>>= 0
+  return x >>> 0
+}
+
+/**
+ * Constantes de ronda de 8 bytes (para A(const)) determinísticas por key.
+ * @returns {Uint8Array[]} Array de longitud 'rounds', cada elemento Uint8Array(8)
+ */
+export function deriveRoundConsts8(keyStr, rounds) {
+  if (!Number.isInteger(rounds) || rounds <= 0) throw new Error('rounds debe ser > 0')
+  const out = []
+  let s = (seedFromKey(keyStr) ^ 0x9e3779b9) >>> 0
+  for (let r = 0; r < rounds; r++) {
+    s = nextRand32((s ^ (r + 1)) >>> 0)
+    const block = new Uint8Array(8)
+    let t = s
+    for (let i = 0; i < 8; i++) {
+      t = nextRand32((t ^ ((r + 1) * (i + 1))) >>> 0)
+      block[i] = t & 0xff
+    }
+    out.push(block)
+  }
+  return out
+}
+
+/**
+ * Máscara de 1 byte por ronda para NibbleShuffle (bit i decide si intercambia hi/lo del byte i).
+ * Por compatibilidad con lo que planteamos en cipher.js: mask = const[0] ^ const[7] ^ 0xA5
+ * @returns {number[]} Array de longitud 'rounds' con valores 0..255
+ */
+export function deriveRoundMasks(keyStr, rounds) {
+  const consts = deriveRoundConsts8(keyStr, rounds)
+  return consts.map(rc => ((rc[0] ^ rc[7] ^ 0xa5) & 0xff))
+}
+
+/* ===================== Helpers debug ===================== */
 export function bytesToHex(bytes) {
   return Array.from(bytes || []).map(b => b.toString(16).padStart(2, '0')).join('')
 }
