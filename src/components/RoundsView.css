@@ -1,0 +1,165 @@
+.rv-card {
+  background: linear-gradient(180deg, rgba(22,22,26,.9), rgba(17,17,20,.9));
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  margin-top: 16px;
+}
+
+.rv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
+}
+.rv-header h3 { margin: 0; font-size: 1.05rem; }
+.rv-sub { color: #9aa0a6; font-size: .85rem; }
+
+.rv-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 14px;
+}
+@media (max-width: 980px) {
+  .rv-layout { grid-template-columns: 1fr; }
+}
+.rv-collapsed .rv-side { display: none; }
+
+.rv-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rv-rounds {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: 8px;
+}
+.rv-round {
+  padding: 8px 0;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.03);
+  color: #cbd5e1;
+  cursor: pointer;
+}
+.rv-round.active {
+  background: linear-gradient(180deg, #6aa9ff, #5883ff);
+  color: #fff;
+  border: none;
+}
+.rv-round:hover { background: rgba(255,255,255,.08); }
+
+.rv-box {
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(255,255,255,.03);
+}
+.rv-box-title {
+  font-size: .85rem;
+  color: #9aa0a6;
+  margin-bottom: 8px;
+}
+
+.rv-sbox-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+.rv-sbox-cell {
+  display: grid;
+  grid-template-columns: auto 16px auto;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+.rv-sbox-in, .rv-sbox-out { font-weight: 600; }
+.rv-sbox-arrow { opacity: .6; text-align: center; }
+
+.rv-pbox-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+.rv-pbox-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+.rv-pbox-i, .rv-pbox-o { font-weight: 600; }
+.rv-pbox-more { color: #9aa0a6; font-size: .85rem; margin-top: 4px; }
+
+.rv-main { display: flex; flex-direction: column; gap: 12px; }
+.rv-badge {
+  align-self: flex-start;
+  font-size: .8rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.08);
+  color: #cbd5e1;
+}
+
+/* ===== Centro: línea por línea ===== */
+.rv-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.rv-line {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rv-tag {
+  align-self: flex-start;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.10);
+  color: #cbd5e1;
+  font-size: .9rem;
+  letter-spacing: .2px;
+}
+
+/* >>> Ajuste clave: permitir WRAP del contenido hex <<< */
+.rv-block {
+  margin: 0;
+  max-width: 100%;
+  white-space: pre-wrap;       /* permite saltos conservando espacios */
+  word-break: break-word;      /* puede cortar “palabras” largas si es necesario */
+  overflow-wrap: anywhere;     /* rompe en cualquier punto si hace falta */
+
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  line-height: 1.35;
+  color: #e5e7eb;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  background: rgba(0,0,0,.3);
+  padding: 10px;
+}
+
+/* Vacío */
+.rv-empty {
+  padding: 20px;
+  border: 1px dashed rgba(255,255,255,.15);
+  border-radius: 12px;
+  color: #9aa0a6;
+  text-align: center;
+}
+
+/* (Opcional) estilos que te quedaron del selector de bloques */
+.rv-toprow { display: none; }   /* si ya no lo usas, lo ocultamos */
+.rv-blocks { display: none; }

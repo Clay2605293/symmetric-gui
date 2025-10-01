@@ -1,0 +1,80 @@
+/* ===== Reset base (Meyer + ajustes) ===== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed,
+figure, figcaption, footer, header, hgroup,
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+  margin: 0; padding: 0; border: 0; font: inherit; vertical-align: baseline;
+}
+article, aside, details, figcaption, figure,
+footer, header, hgroup, menu, nav, section { display: block; }
+ol, ul { list-style: none; }
+blockquote, q { quotes: none; }
+blockquote::before, blockquote::after,
+q::before, q::after { content: ''; }
+table { border-collapse: collapse; border-spacing: 0; }
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* ===== Tokens de tema oscuro ===== */
+:root {
+  --bg: #0b0d10;
+  --bg-elev: #15171c;
+  --fg: #d5d7db;
+  --fg-soft: #9aa0a6;
+  --fg-strong: #e8eaed;
+  --border: rgba(255,255,255,.10);
+  --card-border: rgba(255,255,255,.08);
+  --focus: #6aa9ff;
+  --primary-1: #6aa9ff;
+  --primary-2: #5883ff;
+  --radius: 16px;
+}
+
+/* ===== Base tipográfica y cuerpo ===== */
+html { color-scheme: dark; }
+body {
+  min-height: 100dvh;
+  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji';
+  color: var(--fg);
+  background: var(--bg);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img, picture, video, canvas, svg { display: block; max-width: 100%; }
+input, button, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ===== Enlaces ===== */
+a { color: var(--primary-1); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ===== Utilidades comunes ===== */
+.container { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+.hidden { display: none !important; }
+
+/* Scrollbar sutil en navegadores WebKit */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.18); }
+*::-webkit-scrollbar-track { background: transparent; }

@@ -1,0 +1,31 @@
+/* Layout general del “marco” de la app */
+.shell {
+  min-height: 100dvh;
+  width: 100%;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(88,131,255,.12), transparent 60%),
+    radial-gradient(900px 500px at -10% 20%, rgba(106,169,255,.10), transparent 55%),
+    linear-gradient(180deg, #0f1115 0%, #0b0d10 100%);
+  display: flex;
+  justify-content: center;
+}
+
+.shell-inner {
+  width: 100%;
+  max-width: 1080px;
+  padding: 28px 20px 60px;
+}
+
+/* Titulares globales por si los usas fuera de Home */
+h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: .2px;
+  color: var(--fg-strong, #e8eaed);
+  margin-bottom: 16px;
+}
+
+@media (min-width: 860px) {
+  .shell-inner { padding: 36px 24px 72px; }
+  h1 { font-size: 2rem; }
+}
